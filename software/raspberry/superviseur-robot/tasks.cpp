@@ -291,6 +291,9 @@ void Tasks::OpenComRobot(void *arg) {
     // Synchronization barrier (waiting that all tasks are starting)
     rt_sem_p(&sem_barrier, TM_INFINITE);
     
+        //compteur pour fonc 8 suveillance com
+    int count = 0;
+    
     /**************************************************************************************/
     /* The task openComRobot starts here                                                  */
     /**************************************************************************************/
@@ -302,7 +305,9 @@ void Tasks::OpenComRobot(void *arg) {
         rt_mutex_release(&mutex_robot);
         cout << status;
         cout << ")" << endl << flush;
+        
 
+        
         Message * msgSend;
         if (status < 0) {
             msgSend = new Message(MESSAGE_ANSWER_NACK);
@@ -320,6 +325,7 @@ void Tasks::StartRobotTask(void *arg) {
     cout << "Start " << __PRETTY_FUNCTION__ << endl << flush;
     // Synchronization barrier (waiting that all tasks are starting)
     rt_sem_p(&sem_barrier, TM_INFINITE);
+    int count = 0;
     
     /**************************************************************************************/
     /* The task startRobot starts here                                                    */
@@ -334,6 +340,14 @@ void Tasks::StartRobotTask(void *arg) {
         rt_mutex_release(&mutex_robot);
         cout << msgSend->GetID();
         cout << ")" << endl;
+        
+        if (msgSend->GetID() == MESSAGE_ANSWER_COM_ERROR){
+            count = count +1;}
+        else
+            {count = 0;}
+        
+        if (count >3) {
+            msgSend = new Message(MESSAGE_MONITOR_LOST);}
 
         cout << "Movement answer: " << msgSend->ToString() << endl << flush;
         WriteInQueue(&q_messageToMon, msgSend);  // msgSend will be deleted by sendToMon
@@ -343,6 +357,7 @@ void Tasks::StartRobotTask(void *arg) {
             robotStarted = 1;
             rt_mutex_release(&mutex_robotStarted);
         }
+        
     }
 }
 

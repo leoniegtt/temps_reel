@@ -134,7 +134,7 @@ void Tasks::Init() {
         cerr << "Error task create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
-      if (err = rt_task_create(&th_startCam, "th_close_cam", 0, PRIORITY_TSTOPCAM, 0)) {
+      if (err = rt_task_create(&th_closeCam, "th_close_cam", 0, PRIORITY_TSTOPCAM, 0)) {
         cerr << "Error task create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }

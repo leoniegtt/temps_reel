@@ -77,7 +77,8 @@ private:
     RT_TASK th_startRobot;
     RT_TASK th_move;
     RT_TASK th_update_battery;
-    RT-TASK th_startCam;
+    RT_TASK th_startCam;
+    RT_TASK th_closeCam;
 
     /**********************************************************************/
     /* Mutex                                                              */
@@ -137,6 +138,7 @@ private:
     void UpdateBattery();
 
     void startCam();
+    void closeCam();
     
     /**********************************************************************/
     /* Queue services                                                     */

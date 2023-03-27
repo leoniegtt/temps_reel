@@ -26,7 +26,10 @@
 #define PRIORITY_TRECEIVEFROMMON 25
 #define PRIORITY_TSTARTROBOT 20
 #define PRIORITY_TCAMERA 21
+#define PRIORITY_TSTARTCAM 
+#define PRIORITY_TUPDATEBATTERY
 
+Camera *camera;
 /*
  * Some remarks:
  * 1- This program is mostly a template. It shows you how to create tasks, semaphore
@@ -123,6 +126,15 @@ void Tasks::Init() {
         cerr << "Error task create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
+     if (err = rt_task_create(&th_update_battery, "th_update_battery", 0, PRIORITY_TUPDATEBATTERY, 0)) {
+        cerr << "Error task create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+      if (err = rt_task_create(&th_startCam, "th_startCam", 0, PRIORITY_TSTARTCAM, 0)) {
+        cerr << "Error task create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    
     cout << "Tasks created successfully" << endl << flush;
 
     /**************************************************************************************/
@@ -167,6 +179,16 @@ void Tasks::Run() {
         cerr << "Error task start: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
+    if (err = rt_task_start(&th_update_battery, (void(*)(void*)) & Tasks::UpdateBattery, this)) {
+        cerr << "Error task start: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+     if (err = rt_task_start(&th_startCam, (void(*)(void*)) & Tasks::startCam, this)) {
+        cerr << "Error task start: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    
+
 
     cout << "Tasks launched" << endl << flush;
 }
@@ -413,5 +435,36 @@ Message *Tasks::ReadInQueue(RT_QUEUE *queue) {
     } /**/
 
     return msg;
+}
+
+
+/**
+ * @brief Thread handling update of battery of the robot.
+ */
+void Tasks::UpdateBattery() {
+    rt_task_set_periodic(NULL, TM_NOW, 5000000);
+
+    while (1) {
+        rt_task_wait_period(NULL);
+        Write();
+    }
+}
+
+    void Tasks::startCam() {
+    
+    if( camera.Open()){
+        rt_task_set_periodic(NULL, TM_NOW, 100000000);
+        while (1) {
+            rt_task_wait_period(NULL);
+            camera.Grab 
+    }
+
+    }else{
+        throw std::runtime_error {   "Unable to open camera "     };
+
+    }
+
+
+
 }
 

@@ -83,6 +83,7 @@ private:
     RT_TASK th_startRobot;
     RT_TASK th_move;
     RT_TASK th_camera;
+    RT_TASK th_update_battery;
 
     RT_MUTEX mutex_robotStarted;
     RT_MUTEX mutex_move;
@@ -130,6 +131,8 @@ private:
      * @brief Thread sending data to monitor.
      */
     void SendToMonTask(void *arg);
+
+    void UpdateBattery ();
 //    /**
 //     * \brief       Thread handling server communication.
 //     */

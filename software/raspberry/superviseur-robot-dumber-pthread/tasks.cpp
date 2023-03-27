@@ -119,6 +119,10 @@ void Tasks::Init() {
         cerr << "Error task create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
+      if (err = rt_task_create(&th_update_battery, "th_update_battery", 0, PRIORITY_TUPDATEBATTERY, 0)) {
+        cerr << "Error task create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
     cout << "Tasks created successfully" << endl << flush;
 
     /**************************************************************************************/
@@ -163,6 +167,10 @@ void Tasks::Run() {
     }
 
     if (err = rt_task_start(&th_camera, (void(*)(void*)) & Tasks::CameraTask, this)) {
+        cerr << "Error task start: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+           if (err = rt_task_start(&th_update_battery, (void(*)(void*)) & Tasks::UpdateBattery, this)) {
         cerr << "Error task start: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
@@ -379,5 +387,18 @@ Message *ReadInQueue(RT_QUEUE &queue) {
     }
 
     return msg;
+}
+
+
+/**
+ * @brief Thread handling update of battery of the robot.
+ */
+void Tasks::UpdateBattery() {
+    rt_task_set_periodic(NULL, TM_NOW, 5000000);
+
+    while (1) {
+        rt_task_wait_period(NULL);
+        Write();
+    }
 }
 

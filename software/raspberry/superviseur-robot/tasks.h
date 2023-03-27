@@ -76,7 +76,9 @@ private:
     RT_TASK th_openComRobot;
     RT_TASK th_startRobot;
     RT_TASK th_move;
-    
+    RT_TASK th_update_battery;
+    RT-TASK th_startCam;
+
     /**********************************************************************/
     /* Mutex                                                              */
     /**********************************************************************/
@@ -131,6 +133,10 @@ private:
      * @brief Thread handling control of the robot.
      */
     void MoveTask(void *arg);
+
+    void UpdateBattery();
+
+    void startCam();
     
     /**********************************************************************/
     /* Queue services                                                     */
@@ -148,6 +154,8 @@ private:
      * @return Message read
      */
     Message *ReadInQueue(RT_QUEUE *queue);
+
+
 
 };
 

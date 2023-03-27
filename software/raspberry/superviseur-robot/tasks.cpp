@@ -456,10 +456,11 @@ void Tasks::UpdateBattery() {
         rt_task_set_periodic(NULL, TM_NOW, 100000000);
         while (1) {
             rt_task_wait_period(NULL);
-            camera.Grab 
+            SendToMonTask(camera.Grab();)
     }
 
     }else{
+         SendToMonTask("error : Unable to open camera")
         throw std::runtime_error {   "Unable to open camera "     };
 
     }

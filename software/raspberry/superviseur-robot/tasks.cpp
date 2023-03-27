@@ -134,6 +134,10 @@ void Tasks::Init() {
         cerr << "Error task create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
+      if (err = rt_task_create(&th_startCam, "th_close_cam", 0, PRIORITY_TSTOPCAM, 0)) {
+        cerr << "Error task create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
     
     cout << "Tasks created successfully" << endl << flush;
 
@@ -184,6 +188,10 @@ void Tasks::Run() {
         exit(EXIT_FAILURE);
     }
      if (err = rt_task_start(&th_startCam, (void(*)(void*)) & Tasks::startCam, this)) {
+        cerr << "Error task start: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+      if (err = rt_task_start(&th_close_cam, (void(*)(void*)) & Tasks::closeCam, this)) {
         cerr << "Error task start: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
@@ -291,6 +299,7 @@ void Tasks::ReceiveFromMonTask(void *arg) {
         } else if (msgRcv->CompareID(MESSAGE_ROBOT_GO_FORWARD) ||
                 msgRcv->CompareID(MESSAGE_ROBOT_GO_BACKWARD) ||
                 msgRcv->CompareID(MESSAGE_ROBOT_GO_LEFT) ||
+                msgRcv->CompareID(MESSAGE_ROBOT_GO_RIGHT) ||
                 msgRcv->CompareID(MESSAGE_ROBOT_GO_RIGHT) ||
                 msgRcv->CompareID(MESSAGE_ROBOT_STOP)) {
 
@@ -446,7 +455,8 @@ void Tasks::UpdateBattery() {
 
     while (1) {
         rt_task_wait_period(NULL);
-        Write();
+         msgSend = new Message(MESSAGE_ROBOT_BATTERY_LEVEL);
+        monitor.write(msgSend);
     }
 }
 
@@ -456,16 +466,17 @@ void Tasks::UpdateBattery() {
         rt_task_set_periodic(NULL, TM_NOW, 100000000);
         while (1) {
             rt_task_wait_period(NULL);
-            SendToMonTask(camera.Grab();)
-    }
-
+            monitor.Write(camera.Grab());
+        }
     }else{
          SendToMonTask("error : Unable to open camera")
         throw std::runtime_error {   "Unable to open camera "     };
 
     }
-
-
-
 }
 
+    void Tasks::closeCam() {
+        camera.Close();
+
+        monitor.Write("ack de la demande de fermeture de cam");
+    }

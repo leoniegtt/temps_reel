@@ -1,3 +1,13 @@
+#ignore everything
+*
+
+#except for
+!.gitignore
+!.h
+!.cpp
+
+
+
 # Prerequisites
 *.d
 *.d

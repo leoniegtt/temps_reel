@@ -101,6 +101,10 @@ void Tasks::Init() {
         cerr << "Error semaphore create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
+    if (err = rt_sem_create(&sem_startCamera, NULL, 0, S_FIFO)) {
+        cerr << "Error semaphore create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
     cout << "Semaphores created successfully" << endl << flush;
 
     /**************************************************************************************/
@@ -134,16 +138,11 @@ void Tasks::Init() {
         cerr << "Error task create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
-    /*
-    if (err = rt_task_create(&th_update_battery, "th_update_battery", 0, PRIORITY_TUPDATEBATTERY, 0)) {
+
+    if (err = rt_task_create(&th_startCamera, "th_startCamera", 0, PRIORITY_TSTARTCAM, 0)) {
         cerr << "Error task create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
-    }*/
-    /*
-      if (err = rt_task_create(&th_startCam, "th_startCam", 0, PRIORITY_TSTARTCAM, 0)) {
-        cerr << "Error task create: " << strerror(-err) << endl << flush;
-        exit(EXIT_FAILURE);
-    }
+    }/*
       if (err = rt_task_create(&th_closeCam, "th_close_cam", 0, PRIORITY_TSTOPCAM, 0)) {
         cerr << "Error task create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
@@ -485,11 +484,8 @@ void Tasks::UpdateBattery() {
     // Synchronization barrier (waiting that all tasks are starting)
     rt_sem_p(&sem_getBattery, TM_INFINITE);
 
-
     while (1) {
         rt_task_wait_period(NULL);
-
-        MessageBattery * msg; 
         
         rt_mutex_acquire(&mutex_robot, TM_INFINITE);
         msg = (MessageBattery*)robot.Write(new Message(MESSAGE_ROBOT_BATTERY_GET)); 
@@ -499,9 +495,40 @@ void Tasks::UpdateBattery() {
 
     }
 }
-/*
-    void Tasks::startCam() {
-    
+
+void Tasks::startCam() {
+    Message *msg;
+
+    if (Camera().Open()) {
+        rt_task_set_periodic(NULL, TM_NOW, 500000000);
+
+
+        cout << "Start " << __PRETTY_FUNCTION__ << endl << flush;
+        // Synchronization barrier (waiting that all tasks are starting)
+        rt_sem_p(&sem_startCamera, TM_INFINITE);
+
+        while (1) {
+            rt_task_wait_period(NULL);
+
+            rt_mutex_acquire(&mutex_robot, TM_INFINITE);
+            Img * img = new Img(camera->Grab());
+            MessageImg *msgImg = new MessageImg(MESSAGE_CAM_OPEN, img);
+            robot.Write(msgImg);
+            rt_mutex_release(&mutex_robot);
+
+            WriteInQueue(&q_messageToMon,msgImg);
+        }
+    } else {
+        /*
+        rt_mutex_acquire(&mutex_robot, TM_INFINITE);
+        msg = (Message*)robot.Write(new Message(unable to open camera)); 
+        rt_mutex_release(&mutex_robot);
+        
+        WriteInQueue(&q_messageToMon, msg);
+         */
+    }
+}        
+    /*    
     if( camera.Open()){
         rt_task_set_periodic(NULL, TM_NOW, 100000000);
         while (1) {
@@ -512,9 +539,10 @@ void Tasks::UpdateBattery() {
          SendToMonTask("error : Unable to open camera")
         throw std::runtime_error {   "Unable to open camera "     };
 
-    }
-}
+    }*/
 
+    
+/*
     void Tasks::closeCam() {
         camera.Close();
 

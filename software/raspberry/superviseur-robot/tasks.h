@@ -77,7 +77,7 @@ private:
     RT_TASK th_startRobot;
     RT_TASK th_move;
     RT_TASK th_update_battery;
-    RT_TASK th_startCam;
+    RT_TASK th_startCamera;
     RT_TASK th_closeCam;
 
     /**********************************************************************/
@@ -96,6 +96,8 @@ private:
     RT_SEM sem_serverOk;
     RT_SEM sem_startRobot;
     RT_SEM sem_getBattery;
+    RT_SEM sem_startCamera;
+    RT_SEM sem_closeCam;
 
 
     /**********************************************************************/

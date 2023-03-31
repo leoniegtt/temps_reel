@@ -26,8 +26,8 @@
 #define PRIORITY_TRECEIVEFROMMON 25
 #define PRIORITY_TSTARTROBOT 20
 #define PRIORITY_TCAMERA 21
-#define PRIORITY_TSTARTCAM 
-#define PRIORITY_TUPDATEBATTERY
+#define PRIORITY_TSTARTCAM 20
+#define PRIORITY_TUPDATEBATTERY 24
 
 Camera *camera;
 /*
@@ -97,6 +97,10 @@ void Tasks::Init() {
         cerr << "Error semaphore create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
+        if (err = rt_sem_create(&sem_getBattery, NULL, 0, S_FIFO)) {
+        cerr << "Error semaphore create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
     cout << "Semaphores created successfully" << endl << flush;
 
     /**************************************************************************************/
@@ -126,10 +130,16 @@ void Tasks::Init() {
         cerr << "Error task create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
-     if (err = rt_task_create(&th_update_battery, "th_update_battery", 0, PRIORITY_TUPDATEBATTERY, 0)) {
+    if (err = rt_task_create(&th_update_battery, "th_update_battery", 0, PRIORITY_TUPDATEBATTERY, 0)) {
         cerr << "Error task create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
+    /*
+    if (err = rt_task_create(&th_update_battery, "th_update_battery", 0, PRIORITY_TUPDATEBATTERY, 0)) {
+        cerr << "Error task create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }*/
+    /*
       if (err = rt_task_create(&th_startCam, "th_startCam", 0, PRIORITY_TSTARTCAM, 0)) {
         cerr << "Error task create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
@@ -137,7 +147,7 @@ void Tasks::Init() {
       if (err = rt_task_create(&th_closeCam, "th_close_cam", 0, PRIORITY_TSTOPCAM, 0)) {
         cerr << "Error task create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
-    }
+    }*/
     
     cout << "Tasks created successfully" << endl << flush;
 
@@ -186,7 +196,7 @@ void Tasks::Run() {
     if (err = rt_task_start(&th_update_battery, (void(*)(void*)) & Tasks::UpdateBattery, this)) {
         cerr << "Error task start: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
-    }
+    }/*
      if (err = rt_task_start(&th_startCam, (void(*)(void*)) & Tasks::startCam, this)) {
         cerr << "Error task start: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
@@ -194,7 +204,7 @@ void Tasks::Run() {
       if (err = rt_task_start(&th_close_cam, (void(*)(void*)) & Tasks::closeCam, this)) {
         cerr << "Error task start: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
-    }
+    }*/
     
 
 
@@ -306,6 +316,8 @@ void Tasks::ReceiveFromMonTask(void *arg) {
             rt_mutex_acquire(&mutex_move, TM_INFINITE);
             move = msgRcv->GetID();
             rt_mutex_release(&mutex_move);
+        } else if (msgRcv->CompareID(MESSAGE_ROBOT_BATTERY_GET)){
+            rt_sem_v(&sem_getBattery);
         }
         delete(msgRcv); // mus be deleted manually, no consumer
     }
@@ -466,15 +478,28 @@ Message *Tasks::ReadInQueue(RT_QUEUE *queue) {
  * @brief Thread handling update of battery of the robot.
  */
 void Tasks::UpdateBattery() {
-    rt_task_set_periodic(NULL, TM_NOW, 5000000);
+    rt_task_set_periodic(NULL, TM_NOW, 500000000);
+    
+    MessageBattery *msg;
+    cout << "Start " << __PRETTY_FUNCTION__ << endl << flush;
+    // Synchronization barrier (waiting that all tasks are starting)
+    rt_sem_p(&sem_getBattery, TM_INFINITE);
+
 
     while (1) {
         rt_task_wait_period(NULL);
-         msgSend = new Message(MESSAGE_ROBOT_BATTERY_LEVEL);
-        monitor.write(msgSend);
+
+        MessageBattery * msg; 
+        
+        rt_mutex_acquire(&mutex_robot, TM_INFINITE);
+        msg = (MessageBattery*)robot.Write(new Message(MESSAGE_ROBOT_BATTERY_GET)); 
+        rt_mutex_release(&mutex_robot);
+        
+        WriteInQueue(&q_messageToMon, msg);
+
     }
 }
-
+/*
     void Tasks::startCam() {
     
     if( camera.Open()){
@@ -495,3 +520,5 @@ void Tasks::UpdateBattery() {
 
         monitor.Write("ack de la demande de fermeture de cam");
     }
+    */
+   

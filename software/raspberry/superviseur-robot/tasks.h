@@ -140,6 +140,8 @@ private:
      */
     void MoveTask(void *arg);
 
+    void ComptorError(Message * msgSend) ;
+    
     void UpdateBattery();
 
     void startCam();

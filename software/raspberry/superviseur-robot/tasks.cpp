@@ -97,11 +97,8 @@ void Tasks::Init() {
         cerr << "Error semaphore create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
-<<<<<<< HEAD
-        if (err = rt_sem_create(&sem_getBattery, NULL, 0, S_FIFO)) {
-=======
+
     if (err = rt_sem_create(&sem_getBattery, NULL, 0, S_FIFO)) {
->>>>>>> d8ae3ee777258f4aac0875694dbc77a0e7947a3a
         cerr << "Error semaphore create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
@@ -393,15 +390,6 @@ void Tasks::StartRobotTask(void *arg) {
         cout << msgSend->GetID();
         cout << ")" << endl;
         
-
-        if (msgSend->GetID() == MESSAGE_ANSWER_COM_ERROR){
-            count = count +1;}
-        else
-            {count = 0;}
-        
-        if (count >3) {
-            msgSend = new Message(MESSAGE_MONITOR_LOST);}
-
         cout << "Movement answer: " << msgSend->ToString() << endl << flush;
         WriteInQueue(&q_messageToMon, msgSend);  // msgSend will be deleted by sendToMon
 
@@ -444,8 +432,10 @@ void Tasks::MoveTask(void *arg) {
             cout << " move: " << cpMove;
             
             rt_mutex_acquire(&mutex_robot, TM_INFINITE);
-            robot.Write(new Message((MessageID)cpMove));
-            ComptorError(msgSend) ;
+            Message * msg ;
+            msg = new Message((MessageID)cpMove) ;
+            robot.Write(msg);
+            ComptorError(msg) ;
             rt_mutex_release(&mutex_robot);
         }
         cout << endl << flush;
@@ -517,7 +507,7 @@ void Tasks::UpdateBattery() {
         rt_mutex_acquire(&mutex_robot, TM_INFINITE);
         msg = (MessageBattery*)robot.Write(new Message(MESSAGE_ROBOT_BATTERY_GET)); 
 
-        ComptorError(msgSend) ;
+        ComptorError(msg) ;
 
         rt_mutex_release(&mutex_robot);
         
@@ -545,7 +535,7 @@ void Tasks::startCam() {
             Img * img = new Img(camera->Grab());
             MessageImg *msgImg = new MessageImg(MESSAGE_CAM_OPEN, img);
             robot.Write(msgImg);
-            ComptorError(msgSend) ;
+            ComptorError(msgImg) ;
             rt_mutex_release(&mutex_robot);
 
             WriteInQueue(&q_messageToMon,msgImg);
@@ -558,9 +548,10 @@ void Tasks::startCam() {
         rt_mutex_release(&mutex_robot);
         
         WriteInQueue(&q_messageToMon, msg);
+         *  */ 
          
     }
-} */       
+}      
       
 //Fonctionnalité 15
 

@@ -95,6 +95,10 @@ private:
     RT_SEM sem_openComRobot;
     RT_SEM sem_serverOk;
     RT_SEM sem_startRobot;
+    RT_SEM sem_getBattery;
+    RT_SEM sem_startCamera;
+    RT_SEM sem_closeCam;
+
 
     /**********************************************************************/
     /* Message queues                                                     */
@@ -162,4 +166,3 @@ private:
 };
 
 #endif // __TASKS_H__ 
-

@@ -339,9 +339,7 @@ void Tasks::OpenComRobot(void *arg) {
     // Synchronization barrier (waiting that all tasks are starting)
     rt_sem_p(&sem_barrier, TM_INFINITE);
     
-        //compteur pour fonc 8 suveillance com
-    int count = 0;
-    
+        
     /**************************************************************************************/
     /* The task openComRobot starts here                                                  */
     /**************************************************************************************/
@@ -353,8 +351,6 @@ void Tasks::OpenComRobot(void *arg) {
         rt_mutex_release(&mutex_robot);
         cout << status;
         cout << ")" << endl << flush;
-        
-
         
         Message * msgSend;
         if (status < 0) {
@@ -475,19 +471,24 @@ Message *Tasks::ReadInQueue(RT_QUEUE *queue) {
     return msg;
 }
 
-//Fonctionnalité 8
+//Fonctionnalité 8 - 9
 void Tasks::ComptorError(Message * msgSend) {
     
     if ( (msgSend->GetID() == MESSAGE_ANSWER_COM_ERROR) || (msgSend->GetID() == MESSAGE_ANSWER_ROBOT_ERROR) || (msgSend->GetID() == MESSAGE_ANSWER_ROBOT_TIMEOUT) ){
         count = count +1;
-         cout << "!!!!!!!! Error +1 " << __PRETTY_FUNCTION__ << endl << flush;
+         cout << " Error +1 " << __PRETTY_FUNCTION__ << endl << flush;
     }
     else {
         count = 0;
     }
     if (count >3) {
         msgSend = new Message(MESSAGE_MONITOR_LOST);
-        cout << "?????? Connection lost (3 errors) " << __PRETTY_FUNCTION__ << endl << flush;
+        cout << "!!!! Connection lost (3 errors) !!!!" << __PRETTY_FUNCTION__ << endl << flush;
+        //fermer com robot - superviseur
+        cout << " => Close Communication <= " << __PRETTY_FUNCTION__ << endl << flush;
+        robot.Close();
+        //remettre dans état initial
+        //OpenComRobot();
     }
 
 }
@@ -502,20 +503,35 @@ void Tasks::UpdateBattery() {
     MessageBattery *msg;
     cout << "Start " << __PRETTY_FUNCTION__ << endl << flush;
     // Synchronization barrier (waiting that all tasks are starting)
+    while(1) {
+        // DÉCOCHER LA BATTERIE AVANT DE REDÉMARRER LE ROBOT SINON ÇA NE MARCHERA PAS
+        // FAIRE PAREIL POUR LES FONCTIONS LIÉES À LA CAMÉRA
     rt_sem_p(&sem_getBattery, TM_INFINITE);
 
-    while (1) {
-        rt_task_wait_period(NULL);
-        
-        rt_mutex_acquire(&mutex_robot, TM_INFINITE);
-        msg = (MessageBattery*)robot.Write(new Message(MESSAGE_ROBOT_BATTERY_GET)); 
+        while (1) {
+            rt_task_wait_period(NULL);
+            
+            //acquire
+            rt_mutex_acquire(&mutex_robot, TM_INFINITE);
+            int rs = robotStarted ;
+            //release
+            rt_mutex_release(&mutex_robot);
+            
+            if (rs) {
+                rt_mutex_acquire(&mutex_robot, TM_INFINITE);
+                msg = (MessageBattery*)robot.Write(new Message(MESSAGE_ROBOT_BATTERY_GET)); 
 
-        ComptorError(msg) ;
+                ComptorError(msg) ;
 
-        rt_mutex_release(&mutex_robot);
-        
-        WriteInQueue(&q_messageToMon, msg);
+                rt_mutex_release(&mutex_robot);
 
+                WriteInQueue(&q_messageToMon, msg);
+            }
+            else {
+                break;
+            }
+
+        }
     }
 }
 

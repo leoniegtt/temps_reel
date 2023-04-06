@@ -434,8 +434,9 @@ void Tasks::MoveTask(void *arg) {
             rt_mutex_acquire(&mutex_robot, TM_INFINITE);
             Message * msg ;
             msg = new Message((MessageID)cpMove) ;
-            robot.Write(msg);
-            ComptorError(msg) ;
+            Message * msgSend ;
+            msgSend = robot.Write(msg);
+            ComptorError(msgSend) ;
             rt_mutex_release(&mutex_robot);
         }
         cout << endl << flush;
@@ -477,14 +478,16 @@ Message *Tasks::ReadInQueue(RT_QUEUE *queue) {
 //Fonctionnalité 8
 void Tasks::ComptorError(Message * msgSend) {
     
-    if (msgSend->GetID() == MESSAGE_ANSWER_COM_ERROR) {
+    if ( (msgSend->GetID() == MESSAGE_ANSWER_COM_ERROR) || (msgSend->GetID() == MESSAGE_ANSWER_ROBOT_ERROR) || (msgSend->GetID() == MESSAGE_ANSWER_ROBOT_TIMEOUT) ){
         count = count +1;
+         cout << "!!!!!!!! Error +1 " << __PRETTY_FUNCTION__ << endl << flush;
     }
     else {
         count = 0;
     }
     if (count >3) {
         msgSend = new Message(MESSAGE_MONITOR_LOST);
+        cout << "?????? Connection lost (3 errors) " << __PRETTY_FUNCTION__ << endl << flush;
     }
 
 }
@@ -534,8 +537,7 @@ void Tasks::startCam() {
             rt_mutex_acquire(&mutex_robot, TM_INFINITE);
             Img * img = new Img(camera->Grab());
             MessageImg *msgImg = new MessageImg(MESSAGE_CAM_OPEN, img);
-            robot.Write(msgImg);
-            ComptorError(msgImg) ;
+       
             rt_mutex_release(&mutex_robot);
 
             WriteInQueue(&q_messageToMon,msgImg);
@@ -544,7 +546,7 @@ void Tasks::startCam() {
         /*
         rt_mutex_acquire(&mutex_robot, TM_INFINITE);
         msg = (Message*)robot.Write(new Message(unable to open camera)); 
-        ComptorError(msgSend) ;
+        ComptorError(msg) ;
         rt_mutex_release(&mutex_robot);
         
         WriteInQueue(&q_messageToMon, msg);

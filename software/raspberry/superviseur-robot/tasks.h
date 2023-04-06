@@ -142,6 +142,8 @@ private:
 
     void ComptorError(Message * msgSend) ;
     
+    void MonitorError(Message * msgReceived) ;
+    
     void UpdateBattery();
 
     void startCam();

@@ -302,6 +302,9 @@ void Tasks::ReceiveFromMonTask(void *arg) {
 
     while (1) {
         msgRcv = monitor.Read();
+        // APPELER FONCTION 5
+        MonitorError(msgRcv) ;
+        
         cout << "Rcv <= " << msgRcv->ToString() << endl << flush;
 
         if (msgRcv->CompareID(MESSAGE_MONITOR_LOST)) {
@@ -398,6 +401,41 @@ void Tasks::StartRobotTask(void *arg) {
     }
 }
 
+void Tasks::StartRobotTaskWithWD(void *arg) {
+    cout << "Start " << __PRETTY_FUNCTION__ << endl << flush;
+    // Synchronization barrier (waiting that all tasks are starting)
+    rt_sem_p(&sem_barrier, TM_INFINITE);
+
+    /**************************************************************************************/
+    /* The task startRobot starts here                                                    */
+    /**************************************************************************************/
+    while (1) {
+
+        Message * msgSend;
+        rt_sem_p(&sem_startRobot, TM_INFINITE);
+        cout << "Start robot with watchdog (";
+        rt_mutex_acquire(&mutex_robot, TM_INFINITE);
+        msgSend = robot.Write(robot.StartWithWD());
+        // appeler ComptError
+        ComptorError(msgSend) ;
+        rt_mutex_release(&mutex_robot);
+        cout << msgSend->GetID();
+        cout << ")" << endl;
+        
+        cout << "Movement answer: " << msgSend->ToString() << endl << flush;
+        WriteInQueue(&q_messageToMon, msgSend);  // msgSend will be deleted by sendToMon
+
+        if (msgSend->GetID() == MESSAGE_ANSWER_ACK) {
+            rt_mutex_acquire(&mutex_robotStarted, TM_INFINITE);
+            robotStarted = 1;
+            rt_mutex_release(&mutex_robotStarted);
+        }
+        
+    }
+}
+
+
+
 /**
  * @brief Thread handling control of the robot.
  */
@@ -471,6 +509,21 @@ Message *Tasks::ReadInQueue(RT_QUEUE *queue) {
     return msg;
 }
 
+//Fonctionnalité 5
+void Tasks::MonitorError(Message * msgReceived) {
+    
+    if (msgReceived->GetID() == MESSAGE_MONITOR_LOST) {
+        
+         cout << " !!! Communication Lost between monitor and supervisor " << __PRETTY_FUNCTION__ << endl << flush;
+    }
+    else {
+        cout << " **** F5 OK " << __PRETTY_FUNCTION__ << endl << flush;
+    }
+
+}
+
+//Fonctionnalité 6, à faire quand tout le reste est terminé
+
 //Fonctionnalité 8 - 9
 void Tasks::ComptorError(Message * msgSend) {
     
@@ -492,6 +545,9 @@ void Tasks::ComptorError(Message * msgSend) {
     }
 
 }
+
+//Fonctionnalité 11
+
 
 /**
  * @brief Thread handling update of battery of the robot.
@@ -592,3 +648,9 @@ void Tasks::startCam() {
         monitor.Write("ack de la demande de fermeture de cam");
     }
 */
+
+
+//Fonctionnalité 17
+
+
+//Fonctionnalité 18 - 19

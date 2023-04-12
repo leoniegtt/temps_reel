@@ -633,7 +633,7 @@ void Tasks::UpdateBattery() {
    
 }
 
-
+//Fonctionnalité 14
 void Tasks::startCam() {
     Message *msgSend;
     cout << "StartING start cam " << __PRETTY_FUNCTION__ << endl << flush;
@@ -655,6 +655,7 @@ void Tasks::startCam() {
     }
 }  
 
+//Fonctionnalité 15
 void Tasks::CaptImg() {
     rt_task_set_periodic(NULL, TM_NOW, 100000000);
  
@@ -678,8 +679,7 @@ void Tasks::CaptImg() {
     }
 }
     
-
-
+//Fonctionnalité 16
 void Tasks::closeCam() {
 
     Message *msgSend;
@@ -696,7 +696,9 @@ void Tasks::closeCam() {
         rt_mutex_release(&mutex_cam);
 
 }
+
 /*
+//Fonctionnalité 17
    void Tasks::InitArena() {
     
 

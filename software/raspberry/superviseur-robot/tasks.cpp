@@ -30,6 +30,7 @@
 #define PRIORITY_TUPDATEBATTERY 24
 #define PRIORITY_TSTOPCAM 26
 #define PRIORITY_CAPTIMG 24
+#define PRIORITY_INITARENA 26
 
 Camera *camera;
 
@@ -85,6 +86,10 @@ void Tasks::Init() {
         cerr << "Error mutex create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
+    if (err = rt_mutex_create(&mutex_arena, NULL)) {
+        cerr << "Error mutex create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
 
     
     cout << "Mutexes created successfully" << endl << flush;
@@ -127,6 +132,10 @@ void Tasks::Init() {
         exit(EXIT_FAILURE);
     }
      if (err = rt_sem_create(&sem_closeCam, NULL, 0, S_FIFO)) {
+        cerr << "Error semaphore create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    if (err = rt_sem_create(&sem_InitArena, NULL, 0, S_FIFO)) {
         cerr << "Error semaphore create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
@@ -179,6 +188,10 @@ void Tasks::Init() {
         exit(EXIT_FAILURE);
     }  
 
+    if (err = rt_task_create(&th_InitArena, "th_InitArena", 0, PRIORITY_TSTOPCAM, 0)) {
+        cerr << "Error task create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }  
     cout << "Tasks created successfully" << endl << flush;
 
     /**************************************************************************************/
@@ -234,6 +247,10 @@ void Tasks::Run() {
         exit(EXIT_FAILURE);
     }
       if (err = rt_task_start(&th_closeCam, (void(*)(void*)) & Tasks::closeCam, this)) {
+        cerr << "Error task start: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    if (err = rt_task_start(&th_InitArena, (void(*)(void*)) & Tasks::InitArena, this)) {
         cerr << "Error task start: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
@@ -354,6 +371,8 @@ void Tasks::ReceiveFromMonTask(void *arg) {
             rt_mutex_release(&mutex_move);
         } else if (msgRcv->CompareID(MESSAGE_ROBOT_BATTERY_GET)){
             rt_sem_v(&sem_getBattery);
+        } else if (msgRcv->CompareID(MESSAGE_CAM_ASK_ARENA)){
+            rt_sem_v(&sem_InitArena);
         }
         delete(msgRcv); // mus be deleted manually, no consumer
     }
@@ -661,28 +680,42 @@ void Tasks::CaptImg() {
     
 
 
-    void Tasks::closeCam() {
-          
-        Message *msgSend;
-       
-        cout << "StartING close cam " << __PRETTY_FUNCTION__ << endl << flush;
-       //  msgSend = new Message(MESSAGE_ANSWER_NACK);
-         //   WriteInQueue(&q_messageToMon, msgSend);
-        rt_sem_p(&sem_barrier, TM_INFINITE);
-        rt_sem_p(&sem_closeCam, TM_INFINITE);
-        //if (camera -> IsOpen()){
-            //cout << "not working" << __PRETTY_FUNCTION__ << endl << flush;
-           cout << "cam closing " << __PRETTY_FUNCTION__ << endl << flush;
-           
-            rt_mutex_acquire(&mutex_cam, TM_INFINITE);
-     
-            camera -> Close();
-            rt_mutex_release(&mutex_cam);
+void Tasks::closeCam() {
 
-        //} else {
-        
-        // cout << "Camera already closed" << __PRETTY_FUNCTION__ << endl << flush;
+    Message *msgSend;
+
+    cout << "Start " << __PRETTY_FUNCTION__ << endl << flush;
+
+    rt_sem_p(&sem_barrier, TM_INFINITE);
+    rt_sem_p(&sem_closeCam, TM_INFINITE);
+       cout << "cam closing " << __PRETTY_FUNCTION__ << endl << flush;
+
+        rt_mutex_acquire(&mutex_cam, TM_INFINITE);
+
+        camera -> Close();
+        rt_mutex_release(&mutex_cam);
+
+}
+/*
+   void Tasks::InitArena() {
     
-        //} 
-   }
+
+    cout << "Start " << __PRETTY_FUNCTION__ << endl << flush;
+    rt_sem_v(&sem_closeCam);
+    Arena arena;
+    Img * img = new Img;
         
+    while (1) {
+        rt_mutex_acquire(&mutex_arena, TM_INFINITE);
+        arena = img -> SearchArena();
+        if (arena -> IsEmpty()) {
+            cout << "Empty arena" << __PRETTY_FUNCTION__ << endl << flush;
+        } else {
+            arena = img -> DrawArena(arena);
+        }
+         rt_mutex_release(&mutex_arena);
+    //rechercher arène
+    //renvoyer dessin arène ou message d'echec
+    }
+
+}*/        

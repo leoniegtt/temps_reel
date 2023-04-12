@@ -99,6 +99,7 @@ private:
     RT_SEM sem_getBattery;
     RT_SEM sem_startCamera;
     RT_SEM sem_closeCam;
+    RT_SEM sem_watchdog;
 
 
     /**********************************************************************/
@@ -134,6 +135,8 @@ private:
      * @brief Thread starting the communication with the robot.
      */
     void StartRobotTask(void *arg);
+    
+    void StartRobotTaskWithWD(void *arg);
     
     /**
      * @brief Thread handling control of the robot.

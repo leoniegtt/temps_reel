@@ -106,6 +106,10 @@ void Tasks::Init() {
         cerr << "Error semaphore create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
+    if (err = rt_sem_create(&sem_watchdog, NULL, 0, S_FIFO)) {
+    cerr << "Error semaphore create: " << strerror(-err) << endl << flush;
+    exit(EXIT_FAILURE);
+    }
     cout << "Semaphores created successfully" << endl << flush;
 
     /**************************************************************************************/
@@ -302,14 +306,12 @@ void Tasks::ReceiveFromMonTask(void *arg) {
 
     while (1) {
         msgRcv = monitor.Read();
-        // APPELER FONCTION 5
-        MonitorError(msgRcv) ;
         
         cout << "Rcv <= " << msgRcv->ToString() << endl << flush;
 
         if (msgRcv->CompareID(MESSAGE_MONITOR_LOST)) {
-            delete(msgRcv);
-            exit(-1);
+            // APPELER FONCTION 5
+            MonitorError(msgRcv) ;
         } else if (msgRcv->CompareID(MESSAGE_ROBOT_COM_OPEN)) {
             rt_sem_v(&sem_openComRobot);
         } else if (msgRcv->CompareID(MESSAGE_ROBOT_START_WITHOUT_WD)) {
@@ -401,6 +403,7 @@ void Tasks::StartRobotTask(void *arg) {
     }
 }
 
+//Fonctionnalité 11
 void Tasks::StartRobotTaskWithWD(void *arg) {
     cout << "Start " << __PRETTY_FUNCTION__ << endl << flush;
     // Synchronization barrier (waiting that all tasks are starting)
@@ -419,17 +422,23 @@ void Tasks::StartRobotTaskWithWD(void *arg) {
         // appeler ComptError
         ComptorError(msgSend) ;
         rt_mutex_release(&mutex_robot);
+        
+        rt_sem_v(&sem_watchdog) ;
+        
+        
         cout << msgSend->GetID();
         cout << ")" << endl;
         
         cout << "Movement answer: " << msgSend->ToString() << endl << flush;
-        WriteInQueue(&q_messageToMon, msgSend);  // msgSend will be deleted by sendToMon
+        
+        
 
         if (msgSend->GetID() == MESSAGE_ANSWER_ACK) {
             rt_mutex_acquire(&mutex_robotStarted, TM_INFINITE);
             robotStarted = 1;
             rt_mutex_release(&mutex_robotStarted);
         }
+        WriteInQueue(&q_messageToMon, msgSend);  // msgSend will be deleted by sendToMon
         
     }
 }
@@ -509,20 +518,22 @@ Message *Tasks::ReadInQueue(RT_QUEUE *queue) {
     return msg;
 }
 
-//Fonctionnalité 5
+//Fonctionnalité 5-6
 void Tasks::MonitorError(Message * msgReceived) {
     
     if (msgReceived->GetID() == MESSAGE_MONITOR_LOST) {
         
-         cout << " !!! Communication Lost between monitor and supervisor " << __PRETTY_FUNCTION__ << endl << flush;
+        cout << " !!! Communication Lost between monitor and supervisor " << __PRETTY_FUNCTION__ << endl << flush;
+        delete(msgReceived);
+        robot.Stop() ; // arret du robot
+        // À DÉCOMMENTER closeCam(); // fermeture de la caméra
+        monitor.AcceptClient();
     }
     else {
         cout << " **** F5 OK " << __PRETTY_FUNCTION__ << endl << flush;
     }
 
 }
-
-//Fonctionnalité 6, à faire quand tout le reste est terminé
 
 //Fonctionnalité 8 - 9
 void Tasks::ComptorError(Message * msgSend) {
@@ -541,12 +552,12 @@ void Tasks::ComptorError(Message * msgSend) {
         cout << " => Close Communication <= " << __PRETTY_FUNCTION__ << endl << flush;
         robot.Close();
         //remettre dans état initial
+        rt_sem_v(&sem_openComRobot);
         //OpenComRobot();
     }
 
 }
 
-//Fonctionnalité 11
 
 
 /**

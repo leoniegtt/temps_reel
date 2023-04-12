@@ -41,7 +41,11 @@
     </conf>
     <conf name="Debug__RPI_" type="1">
       <toolsSet>
+<<<<<<< HEAD
         <developmentServer>xenomai@10.105.1.12:22</developmentServer>
+=======
+        <developmentServer>xenomai@10.105.1.10:22</developmentServer>
+>>>>>>> 9b9d1c1fc4c7849354eee3edbe4bbe28f19b8615
         <platform>2</platform>
       </toolsSet>
       <dbx_gdbdebugger version="1">

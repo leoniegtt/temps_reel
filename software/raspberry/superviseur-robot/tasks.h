@@ -80,6 +80,7 @@ private:
     RT_TASK th_update_battery;
     RT_TASK th_startCam;
     RT_TASK th_closeCam;
+    RT_TASK th_CaptImg;
 
     /**********************************************************************/
     /* Mutex                                                              */
@@ -88,6 +89,7 @@ private:
     RT_MUTEX mutex_robot;
     RT_MUTEX mutex_robotStarted;
     RT_MUTEX mutex_move;
+    RT_MUTEX mutex_cam;
 
     /**********************************************************************/
     /* Semaphores                                                         */
@@ -97,10 +99,10 @@ private:
     RT_SEM sem_serverOk;
     RT_SEM sem_startRobot;
     RT_SEM sem_getBattery;
-    RT_SEM sem_startCamera;
-    RT_SEM sem_closeCam;
     RT_SEM sem_watchdog;
-
+    RT_SEM sem_startCam;
+    RT_SEM sem_closeCam;
+    RT_SEM sem_CaptImg;
 
     /**********************************************************************/
     /* Message queues                                                     */
@@ -150,6 +152,7 @@ private:
     void UpdateBattery();
 
     void startCam();
+    void CaptImg();
     void closeCam();
     
     /**********************************************************************/

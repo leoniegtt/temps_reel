@@ -80,6 +80,7 @@ private:
     RT_TASK th_startCam;
     RT_TASK th_closeCam;
     RT_TASK th_CaptImg;
+    RT_TASK th_InitArena;
 
     /**********************************************************************/
     /* Mutex                                                              */
@@ -89,6 +90,8 @@ private:
     RT_MUTEX mutex_robotStarted;
     RT_MUTEX mutex_move;
     RT_MUTEX mutex_cam;
+    RT_MUTEX mutex_arena;
+
 
     /**********************************************************************/
     /* Semaphores                                                         */
@@ -101,6 +104,8 @@ private:
     RT_SEM sem_startCam;
     RT_SEM sem_closeCam;
     RT_SEM sem_CaptImg;
+    RT_SEM sem_InitArena;
+
 
     /**********************************************************************/
     /* Message queues                                                     */
@@ -146,6 +151,7 @@ private:
     void startCam();
     void CaptImg();
     void closeCam();
+    void InitArena();
     
     /**********************************************************************/
     /* Queue services                                                     */

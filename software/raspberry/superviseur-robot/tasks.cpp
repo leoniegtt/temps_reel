@@ -539,18 +539,13 @@ void Tasks::startCam() {
         cout << "Start " << __PRETTY_FUNCTION__ << endl << flush;
         rt_sem_v(&sem_CaptImg);
         rt_mutex_release(&mutex_cam);
-
          //   WriteInQueue(&q_messageToMon,msgImg);
-  
     } else {
-        
          cout << "not working" << __PRETTY_FUNCTION__ << endl << flush;
         msgSend = new Message(MESSAGE_ANSWER_NACK);
         WriteInQueue(&q_messageToMon, msgSend);
-      
-         
+
     }
-    
 }  
 
 void Tasks::CaptImg() {
@@ -560,11 +555,8 @@ void Tasks::CaptImg() {
     rt_sem_p(&sem_barrier, TM_INFINITE);
     // Synchronization barrier (waiting that all tasks are starting)
     
-    
     rt_sem_p(&sem_CaptImg, TM_INFINITE);
    
-    
-
     while (camera->IsOpen()) {
         cout << "captimg " << __PRETTY_FUNCTION__ << endl << flush;
         rt_task_wait_period(NULL);
@@ -576,11 +568,7 @@ void Tasks::CaptImg() {
         rt_mutex_release(&mutex_cam);
        
         WriteInQueue(&q_messageToMon, msgImg);
-
     }
-    
- 
-
 }
     
 
@@ -592,23 +580,22 @@ void Tasks::CaptImg() {
         cout << "StartING close cam " << __PRETTY_FUNCTION__ << endl << flush;
        //  msgSend = new Message(MESSAGE_ANSWER_NACK);
          //   WriteInQueue(&q_messageToMon, msgSend);
-           rt_sem_p(&sem_barrier, TM_INFINITE);
-          rt_sem_p(&sem_closeCam, TM_INFINITE);
-        if (camera -> IsOpen()){
+        rt_sem_p(&sem_barrier, TM_INFINITE);
+        rt_sem_p(&sem_closeCam, TM_INFINITE);
+        //if (camera -> IsOpen()){
             //cout << "not working" << __PRETTY_FUNCTION__ << endl << flush;
-           cout << "cam open cloding " << __PRETTY_FUNCTION__ << endl << flush;
+           cout << "cam closing " << __PRETTY_FUNCTION__ << endl << flush;
            
             rt_mutex_acquire(&mutex_cam, TM_INFINITE);
      
             camera -> Close();
             rt_mutex_release(&mutex_cam);
 
-        } else {
+        //} else {
         
-         cout << "Camera already closed" << __PRETTY_FUNCTION__ << endl << flush;
+        // cout << "Camera already closed" << __PRETTY_FUNCTION__ << endl << flush;
     
-      
-        } 
+        //} 
     }
         
    

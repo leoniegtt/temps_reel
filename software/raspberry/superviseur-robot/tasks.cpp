@@ -113,7 +113,10 @@ void Tasks::Init() {
         cerr << "Error semaphore create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
-
+    if (err = rt_sem_create(&sem_startRobotWithWD, NULL, 0, S_FIFO)) {
+        cerr << "Error semaphore create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
     if (err = rt_sem_create(&sem_watchdog, NULL, 0, S_FIFO)) {
     cerr << "Error semaphore create: " << strerror(-err) << endl << flush;
     exit(EXIT_FAILURE);
@@ -162,6 +165,10 @@ void Tasks::Init() {
         exit(EXIT_FAILURE);
     }
     if (err = rt_task_create(&th_startRobot, "th_startRobot", 0, PRIORITY_TSTARTROBOT, 0)) {
+        cerr << "Error task create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    if (err = rt_task_create(&th_startRobotWithWD, "th_startRobotWtihWD", 0, PRIORITY_TSTARTROBOT, 0)) {
         cerr << "Error task create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
@@ -232,6 +239,11 @@ void Tasks::Run() {
         cerr << "Error task start: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
+    if (err = rt_task_start(&th_startRobotWithWD, (void(*)(void*)) & Tasks::StartRobotTaskWithWD, this)) {
+        cerr << "Error task start: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    
     if (err = rt_task_start(&th_move, (void(*)(void*)) & Tasks::MoveTask, this)) {
         cerr << "Error task start: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
@@ -240,9 +252,12 @@ void Tasks::Run() {
         cerr << "Error task start: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
-    
+    if (err = rt_task_start(&th_startCam, (void(*)(void*)) & Tasks::startCam, this)) {
+        cerr << "Error task start: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
 
-      if (err = rt_task_start(&th_CaptImg, (void(*)(void*)) & Tasks::CaptImg, this)) {
+    if (err = rt_task_start(&th_CaptImg, (void(*)(void*)) & Tasks::CaptImg, this)) {
         cerr << "Error task start: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
@@ -356,9 +371,11 @@ void Tasks::ReceiveFromMonTask(void *arg) {
             rt_sem_v(&sem_openComRobot);
         } else if (msgRcv->CompareID(MESSAGE_ROBOT_START_WITHOUT_WD)) {
             rt_sem_v(&sem_startRobot);
-        }else if (msgRcv->CompareID(MESSAGE_CAM_OPEN)){
+        } else if (msgRcv->CompareID(MESSAGE_ROBOT_START_WITH_WD)) {
+            rt_sem_v(&sem_startRobotWithWD);
+        } else if (msgRcv->CompareID(MESSAGE_CAM_OPEN)){
             rt_sem_v(&sem_startCam);
-        }else if (msgRcv->CompareID(MESSAGE_CAM_CLOSE)){
+        } else if (msgRcv->CompareID(MESSAGE_CAM_CLOSE)){
             rt_sem_v(&sem_closeCam);
         } else if (msgRcv->CompareID(MESSAGE_ROBOT_GO_FORWARD) ||
                 msgRcv->CompareID(MESSAGE_ROBOT_GO_BACKWARD) ||
@@ -449,40 +466,56 @@ void Tasks::StartRobotTask(void *arg) {
     }
 }
 
+
 //Fonctionnalité 11
 void Tasks::StartRobotTaskWithWD(void *arg) {
     cout << "Start " << __PRETTY_FUNCTION__ << endl << flush;
     // Synchronization barrier (waiting that all tasks are starting)
     rt_sem_p(&sem_barrier, TM_INFINITE);
 
-    /**************************************************************************************/
-    /* The task startRobot starts here                                                    */
-    /**************************************************************************************/
+    
     while (1) {
+        
+        int rs;
 
         Message * msgSend;
-        rt_sem_p(&sem_startRobot, TM_INFINITE);
+        rt_sem_p(&sem_startRobotWithWD, TM_INFINITE);
         cout << "Start robot with watchdog (";
         rt_mutex_acquire(&mutex_robot, TM_INFINITE);
         msgSend = robot.Write(robot.StartWithWD());
-        // appeler ComptError
         ComptorError(msgSend) ;
         rt_mutex_release(&mutex_robot);
         
-        rt_sem_v(&sem_watchdog) ;
-        
+        //rt_sem_v(&sem_watchdog) ;
         
         cout << msgSend->GetID();
         cout << ")" << endl;
-        
         cout << "Movement answer: " << msgSend->ToString() << endl << flush;
         
-        
-
         if (msgSend->GetID() == MESSAGE_ANSWER_ACK) {
+            
             rt_mutex_acquire(&mutex_robotStarted, TM_INFINITE);
             robotStarted = 1;
             rt_mutex_release(&mutex_robotStarted);
+            rt_task_set_periodic(NULL, TM_NOW, 1000000000);
+            
+            while(1) {
+                rt_task_wait_period(NULL);
+                rt_mutex_acquire(&mutex_robotStarted, TM_INFINITE);
+                rs = robotStarted ;
+                rt_mutex_release(&mutex_robotStarted) ;
+                if(rs == 1) {
+                    cout << "Periodic Reload update"<< endl << flush ;
+                    rt_mutex_acquire(&mutex_robot, TM_INFINITE);
+                    robot.Write(robot.ReloadWD());
+                    rt_mutex_release(&mutex_robot) ;
+                } else {
+                    break ;
+                }
+                
+            }
+            
+            
         }
         WriteInQueue(&q_messageToMon, msgSend);  // msgSend will be deleted by sendToMon
         
@@ -557,9 +590,9 @@ Message *Tasks::ReadInQueue(RT_QUEUE *queue) {
     if ((err = rt_queue_read(queue, &msg, sizeof ((void*) &msg), TM_INFINITE)) < 0) {
         cout << "Read in queue failed: " << strerror(-err) << endl << flush;
         throw std::runtime_error{"Error in read in queue"};
-    }/** else {
+    }/*else {
         cout << "@msg :" << msg << endl << flush;
-    } /**/
+    } */
 
     return msg;
 }
@@ -572,7 +605,7 @@ void Tasks::MonitorError(Message * msgReceived) {
         cout << " !!! Communication Lost between monitor and supervisor " << __PRETTY_FUNCTION__ << endl << flush;
         delete(msgReceived);
         robot.Stop() ; // arret du robot
-        // À DÉCOMMENTER closeCam(); // fermeture de la caméra
+        closeCam(); // fermeture de la caméra
         monitor.AcceptClient();
     }
     else {
@@ -596,6 +629,10 @@ void Tasks::ComptorError(Message * msgSend) {
         cout << "!!!! Connection lost (3 errors) !!!!" << __PRETTY_FUNCTION__ << endl << flush;
         //fermer com robot - superviseur
         cout << " => Close Communication <= " << __PRETTY_FUNCTION__ << endl << flush;
+        rt_mutex_acquire(&mutex_robotStarted, TM_INFINITE);
+        robotStarted = 0 ;
+        rt_mutex_release(&mutex_robotStarted);
+        
         robot.Close();
         //remettre dans état initial
         rt_sem_v(&sem_openComRobot);

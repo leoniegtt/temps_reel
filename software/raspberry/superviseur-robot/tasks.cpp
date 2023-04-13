@@ -188,7 +188,7 @@ void Tasks::Init() {
         exit(EXIT_FAILURE);
     }  
 
-    if (err = rt_task_create(&th_InitArena, "th_InitArena", 0, PRIORITY_TSTOPCAM, 0)) {
+    if (err = rt_task_create(&th_InitArena, "th_InitArena", 0, PRIORITY_INITARENA, 0)) {
         cerr << "Error task create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }  
@@ -240,7 +240,10 @@ void Tasks::Run() {
         cerr << "Error task start: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
-    
+    if (err = rt_task_start(&th_startCam, (void(*)(void*)) & Tasks::startCam, this)) {
+        cerr << "Error task start: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
 
       if (err = rt_task_start(&th_CaptImg, (void(*)(void*)) & Tasks::CaptImg, this)) {
         cerr << "Error task start: " << strerror(-err) << endl << flush;
@@ -250,10 +253,10 @@ void Tasks::Run() {
         cerr << "Error task start: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
-    /*if (err = rt_task_start(&th_InitArena, (void(*)(void*)) & Tasks::InitArena, this)) {
+    if (err = rt_task_start(&th_InitArena, (void(*)(void*)) & Tasks::InitArena, this)) {
         cerr << "Error task start: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
-    }*/
+    }
     
 
 
@@ -639,20 +642,23 @@ void Tasks::startCam() {
     Message *msgSend;
     cout << "StartING start cam " << __PRETTY_FUNCTION__ << endl << flush;
     rt_sem_p(&sem_barrier, TM_INFINITE);
-    rt_sem_p(&sem_startCam, TM_INFINITE);
-    rt_mutex_acquire(&mutex_cam, TM_INFINITE);
-    camera -> Open();
-     cout << "HEYOOOOO " << __PRETTY_FUNCTION__ << endl << flush;
-    if(camera -> IsOpen()){
-        cout << "Start " << __PRETTY_FUNCTION__ << endl << flush;
-        rt_sem_v(&sem_CaptImg);
-        rt_mutex_release(&mutex_cam);
-         //   WriteInQueue(&q_messageToMon,msgImg);
-    } else {
-         cout << "not working" << __PRETTY_FUNCTION__ << endl << flush;
-        msgSend = new Message(MESSAGE_ANSWER_NACK);
-        WriteInQueue(&q_messageToMon, msgSend);
+    while (1) {
+        rt_sem_p(&sem_startCam, TM_INFINITE);
+        rt_mutex_acquire(&mutex_cam, TM_INFINITE);
+        camera -> Open();
+         cout << "HEYOOOOO " << __PRETTY_FUNCTION__ << endl << flush;
+        if(camera -> IsOpen()){
+            cout << "Start " << __PRETTY_FUNCTION__ << endl << flush;
+            rt_sem_v(&sem_CaptImg);
+            rt_mutex_release(&mutex_cam);
+             //   WriteInQueue(&q_messageToMon,msgImg);
+        } else {
+            rt_mutex_release(&mutex_cam);
+             cout << "not working" << __PRETTY_FUNCTION__ << endl << flush;
+            msgSend = new Message(MESSAGE_ANSWER_NACK);
+            WriteInQueue(&q_messageToMon, msgSend);
 
+        }
     }
 }  
 
@@ -666,17 +672,22 @@ void Tasks::CaptImg() {
     
     rt_sem_p(&sem_CaptImg, TM_INFINITE);
    
-    while (camera->IsOpen()) {
+    while (1) {
         cout << "captimg " << __PRETTY_FUNCTION__ << endl << flush;
         rt_task_wait_period(NULL);
              // Synchronization barrier (waiting that all tasks are starting)
         rt_mutex_acquire(&mutex_cam, TM_INFINITE);
-        Img * img = new Img(camera->Grab());
-        MessageImg *msgImg = new MessageImg(MESSAGE_CAM_IMAGE, img);
+        if(camera -> IsOpen()){
+            Img * img = new Img(camera->Grab());
+            MessageImg *msgImg = new MessageImg(MESSAGE_CAM_IMAGE, img);
+            WriteInQueue(&q_messageToMon, msgImg);
+        } else {
+            cout << "captimg not working" << __PRETTY_FUNCTION__ << endl << flush;
+        }
          
         rt_mutex_release(&mutex_cam);
        
-        WriteInQueue(&q_messageToMon, msgImg);
+        
     }
 }
     
@@ -688,21 +699,28 @@ void Tasks::closeCam() {
     cout << "Start " << __PRETTY_FUNCTION__ << endl << flush;
 
     rt_sem_p(&sem_barrier, TM_INFINITE);
-    rt_sem_p(&sem_closeCam, TM_INFINITE);
-       cout << "cam closing " << __PRETTY_FUNCTION__ << endl << flush;
+    while (1) {
+        rt_sem_p(&sem_closeCam, TM_INFINITE);
+        cout << "cam closing " << __PRETTY_FUNCTION__ << endl << flush;
 
         rt_mutex_acquire(&mutex_cam, TM_INFINITE);
+        if(camera -> IsOpen()){
+            camera -> Close();
+        } else {
+            cout << "cam closing not working" << __PRETTY_FUNCTION__ << endl << flush;
 
-        camera -> Close();
+        }
         rt_mutex_release(&mutex_cam);
+
+    }
 
 }
 
-/*
+
 //Fonctionnalité 17
    void Tasks::InitArena() {
     
-
+/*
     cout << "Start " << __PRETTY_FUNCTION__ << endl << flush;
     rt_sem_v(&sem_closeCam);
     Arena arena;
@@ -720,5 +738,5 @@ void Tasks::closeCam() {
     //rechercher arène
     //renvoyer dessin arène ou message d'echec
     }
-
-}*/        
+*/
+}     

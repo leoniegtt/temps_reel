@@ -64,6 +64,8 @@ private:
     /**********************************************************************/
     ComMonitor monitor;
     ComRobot robot;
+    Arena arena ;
+    //Camera *camera;
     int count = 0 ;
     int robotStarted = 0;
     int move = MESSAGE_ROBOT_STOP;

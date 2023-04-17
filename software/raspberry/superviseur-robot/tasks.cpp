@@ -32,7 +32,7 @@
 #define PRIORITY_CAPTIMG 24
 #define PRIORITY_INITARENA 26
 
-Camera *camera;
+Camera * camera;
 
 /*
  * Some remarks:
@@ -714,6 +714,7 @@ void Tasks::CaptImg() {
             Img * img = new Img(camera->Grab());
             MessageImg *msgImg = new MessageImg(MESSAGE_CAM_IMAGE, img);
             WriteInQueue(&q_messageToMon, msgImg);
+            
         } else {
             cout << "captimg not working" << __PRETTY_FUNCTION__ << endl << flush;
         }
@@ -752,24 +753,37 @@ void Tasks::closeCam() {
 
 //Fonctionnalité 17
    void Tasks::InitArena() {
+       /*
+        rt_task_set_periodic(NULL, TM_NOW, 100000000);
     
-/*
     cout << "Start " << __PRETTY_FUNCTION__ << endl << flush;
-    rt_sem_v(&sem_closeCam);
-    Arena arena;
-    Img * img = new Img;
+    rt_sem_p(&sem_barrier, TM_INFINITE);
+    
+   while (1) {
+       
+        rt_task_wait_period(NULL);
+         cout << "BEGINNN " << __PRETTY_FUNCTION__ << endl << flush;
         
-    while (1) {
+        rt_sem_p(&sem_InitArena, TM_INFINITE);
+        rt_mutex_acquire(&mutex_cam, TM_INFINITE);
+        Img * img = new Img(camera->Grab());
+        
         rt_mutex_acquire(&mutex_arena, TM_INFINITE);
         arena = img -> SearchArena();
-        if (arena -> IsEmpty()) {
+        rt_mutex_release(&mutex_arena);
+
+         cout << "ENDDD " << __PRETTY_FUNCTION__ << endl << flush;
+         
+        if (arena.IsEmpty()) {
             cout << "Empty arena" << __PRETTY_FUNCTION__ << endl << flush;
+            rt_mutex_release(&mutex_cam);
         } else {
-            arena = img -> DrawArena(arena);
+             cout << "ARENAAA DRAWING " << __PRETTY_FUNCTION__ << endl << flush;
+            img -> DrawArena(arena);
+             cout << "ARENA OK " << __PRETTY_FUNCTION__ << endl << flush;
+             rt_mutex_release(&mutex_cam);
         }
-         rt_mutex_release(&mutex_arena);
-    //rechercher arène
-    //renvoyer dessin arène ou message d'echec
+      
     }
-*/
-}     
+ */
+}   

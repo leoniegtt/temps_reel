@@ -111,6 +111,7 @@ private:
     RT_SEM sem_closeCam;
     RT_SEM sem_CaptImg;
     RT_SEM sem_InitArena;
+    RT_SEM sem_ArenaOk;
 
 
     /**********************************************************************/

@@ -69,6 +69,7 @@ private:
     int count = 0 ;
     int robotStarted = 0;
     int move = MESSAGE_ROBOT_STOP;
+    bool positionActivated = false;
     
     /**********************************************************************/
     /* Tasks                                                              */
@@ -85,6 +86,7 @@ private:
     RT_TASK th_closeCam;
     RT_TASK th_CaptImg;
     RT_TASK th_InitArena;
+    RT_TASK th_Position;
 
     /**********************************************************************/
     /* Mutex                                                              */
@@ -111,6 +113,7 @@ private:
     RT_SEM sem_closeCam;
     RT_SEM sem_CaptImg;
     RT_SEM sem_InitArena;
+    RT_SEM sem_position;
 
 
     /**********************************************************************/
@@ -164,6 +167,7 @@ private:
     void CaptImg();
     void closeCam();
     void InitArena();
+    void PositionRobot(void *arg);
     
     /**********************************************************************/
     /* Queue services                                                     */

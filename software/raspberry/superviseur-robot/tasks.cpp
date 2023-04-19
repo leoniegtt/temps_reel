@@ -31,6 +31,7 @@
 #define PRIORITY_TSTOPCAM 26
 #define PRIORITY_CAPTIMG 24
 #define PRIORITY_INITARENA 26
+#define PRIORITY_POSITION 19
 
 Camera * camera;
 
@@ -90,6 +91,7 @@ void Tasks::Init() {
         cerr << "Error mutex create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
+    
 
     
     cout << "Mutexes created successfully" << endl << flush;
@@ -118,8 +120,8 @@ void Tasks::Init() {
         exit(EXIT_FAILURE);
     }
     if (err = rt_sem_create(&sem_watchdog, NULL, 0, S_FIFO)) {
-    cerr << "Error semaphore create: " << strerror(-err) << endl << flush;
-    exit(EXIT_FAILURE);
+        cerr << "Error semaphore create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
     }
 
     if (err = rt_sem_create(&sem_getBattery, NULL, 0, S_FIFO)) {
@@ -139,6 +141,11 @@ void Tasks::Init() {
         exit(EXIT_FAILURE);
     }
     if (err = rt_sem_create(&sem_InitArena, NULL, 0, S_FIFO)) {
+        cerr << "Error semaphore create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+  
+        if (err = rt_sem_create(&sem_position, NULL, 0, S_FIFO)) {
         cerr << "Error semaphore create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
@@ -208,6 +215,12 @@ void Tasks::Init() {
         cerr << "Error msg queue create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
+     if (err = rt_task_create(&th_Position, "th_Position", 0, PRIORITY_POSITION, 0))
+    {
+        cerr << "Error task create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    
     cout << "Queues created successfully" << endl << flush;
 
 }
@@ -269,6 +282,11 @@ void Tasks::Run() {
         cerr << "Error task start: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
+     if (err = rt_task_start(&th_Position, (void(*)(void*)) & Tasks::PositionRobot, this)) {
+        cerr << "Error task start: " << strerror(-err) << endl << flush;
+         exit(EXIT_FAILURE);
+    }
+    
     
 
 
@@ -391,6 +409,13 @@ void Tasks::ReceiveFromMonTask(void *arg) {
             rt_sem_v(&sem_getBattery);
         } else if (msgRcv->CompareID(MESSAGE_CAM_ASK_ARENA)){
             rt_sem_v(&sem_InitArena);
+        }
+         else if (msgRcv->CompareID(MESSAGE_CAM_POSITION_COMPUTE_START)) {
+            rt_sem_v(&sem_position);
+        }
+        else if (msgRcv->CompareID(MESSAGE_CAM_POSITION_COMPUTE_STOP))
+        {
+            positionActivated = false;
         }
         delete(msgRcv); // mus be deleted manually, no consumer
     }
@@ -748,6 +773,44 @@ void Tasks::closeCam() {
 
     }
 
+}
+void Tasks::PositionRobot(void *arg)
+{
+    MessagePosition *msgPos;
+    rt_task_set_periodic(NULL, TM_NOW, 100000000);
+    while(1)
+    {
+        rt_sem_p(&sem_position, TM_INFINITE);
+        
+        rt_mutex_acquire(&mutex_cam, TM_INFINITE);
+        
+        positionActivated = true;
+        
+        while(positionActivated)
+        {
+            Img * img = new Img(camera->Grab());
+            std::list<Position>  positions = img->SearchRobot(arena);
+           // if(positions.empty())
+           // {
+                img->DrawRobot(positions.front());
+                msgPos = new MessagePosition(MESSAGE_CAM_POSITION, positions.front());
+                cout << "Positions Not Found" << endl << flush;
+           // }
+           // else
+           // {
+                //msgPos = new MessagePosition(MESSAGE_CAM_POSITION,Position());
+                cout << "Positions Found" << endl << flush;
+           // }
+
+            MessageImg *msgImg = new MessageImg(MESSAGE_CAM_IMAGE, img);
+            WriteInQueue(&q_messageToMon, msgImg);
+            WriteInQueue(&q_messageToMon, msgPos);
+            
+        }
+        
+        rt_mutex_release(&mutex_cam);
+    }
+    
 }
 
 

@@ -144,12 +144,11 @@ void Tasks::Init() {
         cerr << "Error semaphore create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
-<<<<<<< HEAD
-  
-        if (err = rt_sem_create(&sem_position, NULL, 0, S_FIFO)) {
-=======
+    if (err = rt_sem_create(&sem_position, NULL, 0, S_FIFO)) {
+        cerr << "Error semaphore create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
     if (err = rt_sem_create(&sem_ArenaOk, NULL, 0, S_FIFO)) {
->>>>>>> 1d3060772499fef7873b870e0c426b8a3f024e62
         cerr << "Error semaphore create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
@@ -694,6 +693,7 @@ void Tasks::UpdateBattery() {
         
         rt_mutex_acquire(&mutex_robot, TM_INFINITE);
         msg = (MessageBattery*)robot.Write(new Message(MESSAGE_ROBOT_BATTERY_GET)); 
+        cout <<  "---------------" << __PRETTY_FUNCTION__ << endl << flush;
         ComptorError(msg) ;
         rt_mutex_release(&mutex_robot);
         
@@ -782,44 +782,7 @@ void Tasks::closeCam() {
     }
 
 }
-void Tasks::PositionRobot(void *arg)
-{
-    MessagePosition *msgPos;
-    rt_task_set_periodic(NULL, TM_NOW, 100000000);
-    while(1)
-    {
-        rt_sem_p(&sem_position, TM_INFINITE);
-        
-        rt_mutex_acquire(&mutex_cam, TM_INFINITE);
-        
-        positionActivated = true;
-        
-        while(positionActivated)
-        {
-            Img * img = new Img(camera->Grab());
-            std::list<Position>  positions = img->SearchRobot(arena);
-           // if(positions.empty())
-           // {
-                img->DrawRobot(positions.front());
-                msgPos = new MessagePosition(MESSAGE_CAM_POSITION, positions.front());
-                cout << "Positions Not Found" << endl << flush;
-           // }
-           // else
-           // {
-                //msgPos = new MessagePosition(MESSAGE_CAM_POSITION,Position());
-                cout << "Positions Found" << endl << flush;
-           // }
 
-            MessageImg *msgImg = new MessageImg(MESSAGE_CAM_IMAGE, img);
-            WriteInQueue(&q_messageToMon, msgImg);
-            WriteInQueue(&q_messageToMon, msgPos);
-            
-        }
-        
-        rt_mutex_release(&mutex_cam);
-    }
-    
-}
 
 
 //Fonctionnalité 17
@@ -865,5 +828,41 @@ void Tasks::PositionRobot(void *arg)
         }
       
     }
- 
-}   
+   }
+ void Tasks::PositionRobot(void *arg){
+    MessagePosition *msgPos;
+    rt_task_set_periodic(NULL, TM_NOW, 100000000);
+    while(1)    {
+        rt_sem_p(&sem_position, TM_INFINITE);
+        
+        rt_mutex_acquire(&mutex_cam, TM_INFINITE);
+        
+        positionActivated = true;
+        
+        while(positionActivated){
+            Img * img = new Img(camera->Grab());
+            std::list<Position>  positions = img->SearchRobot(arena);
+           // if(positions.empty())
+           // {
+                img->DrawRobot(positions.front());
+                msgPos = new MessagePosition(MESSAGE_CAM_POSITION, positions.front());
+                cout << "Positions Not Found" << endl << flush;
+           // }
+           // else
+           // {
+                //msgPos = new MessagePosition(MESSAGE_CAM_POSITION,Position());
+                cout << "Positions Found" << endl << flush;
+           // }
+
+            MessageImg *msgImg = new MessageImg(MESSAGE_CAM_IMAGE, img);
+            WriteInQueue(&q_messageToMon, msgImg);
+            WriteInQueue(&q_messageToMon, msgPos);
+            
+        }
+        
+        rt_mutex_release(&mutex_cam);
+    }
+    
+}
+
+   

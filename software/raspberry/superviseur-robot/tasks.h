@@ -113,7 +113,11 @@ private:
     RT_SEM sem_closeCam;
     RT_SEM sem_CaptImg;
     RT_SEM sem_InitArena;
+<<<<<<< HEAD
     RT_SEM sem_position;
+=======
+    RT_SEM sem_ArenaOk;
+>>>>>>> 1d3060772499fef7873b870e0c426b8a3f024e62
 
 
     /**********************************************************************/

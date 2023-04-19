@@ -144,8 +144,12 @@ void Tasks::Init() {
         cerr << "Error semaphore create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
+<<<<<<< HEAD
   
         if (err = rt_sem_create(&sem_position, NULL, 0, S_FIFO)) {
+=======
+    if (err = rt_sem_create(&sem_ArenaOk, NULL, 0, S_FIFO)) {
+>>>>>>> 1d3060772499fef7873b870e0c426b8a3f024e62
         cerr << "Error semaphore create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
@@ -409,6 +413,10 @@ void Tasks::ReceiveFromMonTask(void *arg) {
             rt_sem_v(&sem_getBattery);
         } else if (msgRcv->CompareID(MESSAGE_CAM_ASK_ARENA)){
             rt_sem_v(&sem_InitArena);
+        } else if (msgRcv->CompareID(MESSAGE_CAM_ARENA_CONFIRM)){
+            rt_sem_v(&sem_ArenaOk);
+        } else if (msgRcv->CompareID(MESSAGE_CAM_ARENA_INFIRM)){
+            rt_sem_v(&sem_ArenaOk);
         }
          else if (msgRcv->CompareID(MESSAGE_CAM_POSITION_COMPUTE_START)) {
             rt_sem_v(&sem_position);
@@ -816,8 +824,8 @@ void Tasks::PositionRobot(void *arg)
 
 //Fonctionnalité 17
    void Tasks::InitArena() {
-       /*
-        rt_task_set_periodic(NULL, TM_NOW, 100000000);
+       
+    rt_task_set_periodic(NULL, TM_NOW, 100000000);
     
     cout << "Start " << __PRETTY_FUNCTION__ << endl << flush;
     rt_sem_p(&sem_barrier, TM_INFINITE);
@@ -828,6 +836,7 @@ void Tasks::PositionRobot(void *arg)
          cout << "BEGINNN " << __PRETTY_FUNCTION__ << endl << flush;
         
         rt_sem_p(&sem_InitArena, TM_INFINITE);
+        
         rt_mutex_acquire(&mutex_cam, TM_INFINITE);
         Img * img = new Img(camera->Grab());
         
@@ -843,10 +852,18 @@ void Tasks::PositionRobot(void *arg)
         } else {
              cout << "ARENAAA DRAWING " << __PRETTY_FUNCTION__ << endl << flush;
             img -> DrawArena(arena);
-             cout << "ARENA OK " << __PRETTY_FUNCTION__ << endl << flush;
-             rt_mutex_release(&mutex_cam);
+            
+            MessageImg *msgImg = new MessageImg(MESSAGE_CAM_IMAGE, img);
+            WriteInQueue(&q_messageToMon, msgImg);
+            
+            cout << "ARENA OK " << __PRETTY_FUNCTION__ << endl << flush;
+            
+            rt_sem_p(&sem_ArenaOk, TM_INFINITE);
+            rt_mutex_release(&mutex_cam);
+            //wait for semaphore to validate arena
+
         }
       
     }
- */
+ 
 }   

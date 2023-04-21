@@ -826,13 +826,16 @@ void Tasks::closeCam() {
             //wait for semaphore to validate arena
 
         }
+ 
       
     }
    }
  void Tasks::PositionRobot(void *arg){
     MessagePosition *msgPos;
     rt_task_set_periodic(NULL, TM_NOW, 100000000);
+     rt_sem_p(&sem_barrier, TM_INFINITE);
     while(1)    {
+          
         rt_sem_p(&sem_position, TM_INFINITE);
         
         rt_mutex_acquire(&mutex_cam, TM_INFINITE);
@@ -842,18 +845,10 @@ void Tasks::closeCam() {
         while(positionActivated){
             Img * img = new Img(camera->Grab());
             std::list<Position>  positions = img->SearchRobot(arena);
-           // if(positions.empty())
-           // {
-                img->DrawRobot(positions.front());
+             img->DrawRobot(positions.front());
                 msgPos = new MessagePosition(MESSAGE_CAM_POSITION, positions.front());
                 cout << "Positions Not Found" << endl << flush;
-           // }
-           // else
-           // {
-                //msgPos = new MessagePosition(MESSAGE_CAM_POSITION,Position());
-                cout << "Positions Found" << endl << flush;
-           // }
-
+       
             MessageImg *msgImg = new MessageImg(MESSAGE_CAM_IMAGE, img);
             WriteInQueue(&q_messageToMon, msgImg);
             WriteInQueue(&q_messageToMon, msgPos);
